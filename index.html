@@ -132,7 +132,6 @@
     <script>
       /* --- JAVASCRIPT DIMULAI DI SINI --- */
       document.addEventListener('DOMContentLoaded', () => {
-        // ... (Kode JavaScript untuk addAgentInput, addGoalInput, populateExampleData, dll. tetap sama)
         const agentInputsDiv = document.getElementById('agent-inputs');
         const goalInputsDiv = document.getElementById('goal-inputs');
         const addAgentBtn = document.getElementById('add-agent');
@@ -240,7 +239,7 @@
         function populateExampleData() {
           addAgentInput({ name: 'Agent A', energy: 80, hunger: 20, we: 0.2, wh: 0.1 });
           addAgentInput({ name: 'Agent B', energy: 60, hunger: 40, we: 0.1, wh: 0.6 });
-          addAgentInput({ name: 'Agent C', energy: 50, hunger: 50, we: 0.3, wh: 0.2 });
+          addAgentInput({ name: 'Agent C', energy: 25, hunger: 80, we: 0.3, wh: 0.2 }); // Example for critical state
           addGoalInput({ name: 'Planting', benefit: 1, ecost: 5, hcost: 10 });
           addGoalInput({ name: 'Watering', benefit: 1, ecost: 10, hcost: 20 });
           addGoalInput({ name: 'Harvesting', benefit: 2, ecost: 15, hcost: 30 });
@@ -360,65 +359,91 @@
           agents.forEach((agent) => {
             const agentResultDiv = document.createElement('div');
             agentResultDiv.className = 'agent-result bg-gray-750 border border-gray-600 rounded-lg p-4 shadow';
-            let bestGoal = null;
-            let maxUtility = -Infinity;
 
             const agentHeader = document.createElement('h3');
             agentHeader.className = 'text-lg font-semibold text-teal-400 mb-2';
             agentHeader.innerHTML = `Hasil untuk <span class="text-teal-300 font-bold">${agent.name}</span> (E: ${agent.energy}, H: ${agent.hunger})`;
             agentResultDiv.appendChild(agentHeader);
 
-            const goalUtilityList = document.createElement('ul');
-            goalUtilityList.className = 'goal-utility-list list-none p-0 space-y-2';
+            let bestGoal = null;
+            let maxUtility = -Infinity;
+            let choiceReasonHTML = '';
 
-            goals.forEach((goal) => {
-              const WGoal = goal.agentWeights[agent.name] !== undefined ? goal.agentWeights[agent.name] : 0.5;
-              const energyCostFactor = goal.ecost / EMax;
-              const hungerCostFactor = goal.hcost / HMax;
-              const utility = WGoal * goal.benefit - agent.we * energyCostFactor - agent.wh * hungerCostFactor;
-
-              const listItem = document.createElement('li');
-              listItem.className = 'bg-gray-600 p-2 rounded-md text-sm text-gray-300';
-
-              // Membuat elemen <details> untuk rincian perhitungan
-              const details = document.createElement('details');
-              const summary = document.createElement('summary');
-              summary.className = 'flex justify-between items-center';
-              summary.innerHTML = `<span>Goal "<span class="font-medium text-sky-300">${goal.name}</span>":</span> <span class="font-semibold text-white">${utility.toFixed(3)}</span>`;
-
-              const calculationDiv = document.createElement('div');
-              calculationDiv.className = 'mt-2 pt-2 border-t border-gray-500 text-xs text-gray-400 space-y-1 font-mono';
-              calculationDiv.innerHTML = `
-                        <p><strong class="text-gray-300">Rumus:</strong> U = (W_Goal * Benefit) - (W_E * (ECost / EMax)) - (W_H * (HCost / HMax))</p>
-                        <p><strong class="text-gray-300">Substitusi:</strong></p>
-                        <p class="pl-4">U = (${WGoal} * ${goal.benefit}) - (${agent.we} * (${goal.ecost} / ${EMax})) - (${agent.wh} * (${goal.hcost} / ${HMax}))</p>
-                        <p class="pl-4">U = ${(WGoal * goal.benefit).toFixed(3)} - ${(agent.we * energyCostFactor).toFixed(3)} - ${(agent.wh * hungerCostFactor).toFixed(3)}</p>
-                        <p class="pl-4 font-bold text-gray-200">U = ${utility.toFixed(3)}</p>
-                    `;
-
-              details.appendChild(summary);
-              details.appendChild(calculationDiv);
-              listItem.appendChild(details);
-              goalUtilityList.appendChild(listItem);
-
-              if (utility > maxUtility) {
-                maxUtility = utility;
-                bestGoal = goal;
-              }
-            });
-
-            agentResultDiv.appendChild(goalUtilityList);
-
-            const bestGoalP = document.createElement('p');
-            bestGoalP.className = 'mt-3 pt-2 border-t border-gray-600';
-            if (bestGoal) {
-              bestGoalP.innerHTML = `<strong class="text-green-400">${agent.name} memilih Goal terbaik: "<span class="text-green-300 font-bold">${bestGoal.name}</span>" (Utilitas: <span class="text-green-300 font-bold">${maxUtility.toFixed(
-                3
-              )}</span>)</strong>`;
-            } else {
-              bestGoalP.innerHTML = `<span class="text-amber-400">Tidak ada Goal yang bisa dipilih untuk ${agent.name}.</span>`;
+            // 1. Periksa kondisi kritis terlebih dahulu
+            const eatGoal = goals.find((g) => g.name.toLowerCase() === 'eat');
+            if (eatGoal && agent.hunger > 70) {
+              bestGoal = eatGoal;
+              choiceReasonHTML = `dipilih karena <strong class="text-amber-400">kondisi kritis</strong>: Rasa Lapar > 70 (nilai: ${agent.hunger}).`;
             }
-            agentResultDiv.appendChild(bestGoalP);
+
+            const restGoal = goals.find((g) => g.name.toLowerCase() === 'rest');
+            if (!bestGoal && restGoal && agent.energy < 30) {
+              bestGoal = restGoal;
+              choiceReasonHTML = `dipilih karena <strong class="text-amber-400">kondisi kritis</strong>: Energi < 30 (nilai: ${agent.energy}).`;
+            }
+
+            // 2. Jika tidak ada kondisi kritis, hitung utilitas untuk goal reguler
+            if (!bestGoal) {
+              const goalUtilityList = document.createElement('ul');
+              goalUtilityList.className = 'goal-utility-list list-none p-0 space-y-2';
+
+              const regularGoals = goals.filter((g) => g.name.toLowerCase() !== 'eat' && g.name.toLowerCase() !== 'rest');
+
+              if (regularGoals.length > 0) {
+                regularGoals.forEach((goal) => {
+                  const WGoal = goal.agentWeights[agent.name] !== undefined ? goal.agentWeights[agent.name] : 0.5;
+                  const energyCostFactor = goal.ecost / EMax;
+                  const hungerCostFactor = goal.hcost / HMax;
+                  const utility = WGoal * goal.benefit - agent.we * energyCostFactor - agent.wh * hungerCostFactor;
+
+                  const listItem = document.createElement('li');
+                  listItem.className = 'bg-gray-600 p-2 rounded-md text-sm text-gray-300';
+                  const details = document.createElement('details');
+                  const summary = document.createElement('summary');
+                  summary.className = 'flex justify-between items-center';
+                  summary.innerHTML = `<span>Goal "<span class="font-medium text-sky-300">${goal.name}</span>":</span> <span class="font-semibold text-white">${utility.toFixed(3)}</span>`;
+                  const calculationDiv = document.createElement('div');
+                  calculationDiv.className = 'mt-2 pt-2 border-t border-gray-500 text-xs text-gray-400 space-y-1 font-mono';
+                  calculationDiv.innerHTML = `
+                                <p><strong class="text-gray-300">Rumus:</strong> U = (W_Goal * Benefit) - (W_E * (ECost / EMax)) - (W_H * (HCost / HMax))</p>
+                                <p><strong class="text-gray-300">Substitusi:</strong></p>
+                                <p class="pl-4">U = (${WGoal} * ${goal.benefit}) - (${agent.we} * (${goal.ecost} / ${EMax})) - (${agent.wh} * (${goal.hcost} / ${HMax}))</p>
+                                <p class="pl-4">U = ${(WGoal * goal.benefit).toFixed(3)} - ${(agent.we * energyCostFactor).toFixed(3)} - ${(agent.wh * hungerCostFactor).toFixed(3)}</p>
+                                <p class="pl-4 font-bold text-gray-200">U = ${utility.toFixed(3)}</p>
+                            `;
+                  details.appendChild(summary);
+                  details.appendChild(calculationDiv);
+                  listItem.appendChild(details);
+                  goalUtilityList.appendChild(listItem);
+
+                  if (utility > maxUtility) {
+                    maxUtility = utility;
+                    bestGoal = goal;
+                  }
+                });
+
+                agentResultDiv.appendChild(goalUtilityList);
+                if (bestGoal) {
+                  choiceReasonHTML = `dipilih berdasarkan <strong class="text-sky-400">utilitas tertinggi</strong> (${maxUtility.toFixed(3)}).`;
+                }
+              }
+            }
+
+            // 3. Tampilkan keputusan akhir
+            const finalChoiceDiv = document.createElement('div');
+            finalChoiceDiv.className = 'mt-3 pt-3 border-t border-gray-600';
+
+            if (bestGoal) {
+              finalChoiceDiv.innerHTML = `
+                        <p class="font-semibold text-green-400">Keputusan Akhir:</p>
+                        <p>${agent.name} memilih Goal "<span class="font-bold text-green-300">${bestGoal.name}</span>".</p>
+                        <p class="text-sm text-gray-400">Alasan: ${choiceReasonHTML}</p>
+                    `;
+            } else {
+              finalChoiceDiv.innerHTML = `<p class="text-amber-400">${agent.name} tidak memiliki goal yang bisa dipilih.</p>`;
+            }
+
+            agentResultDiv.appendChild(finalChoiceDiv);
             resultsDiv.appendChild(agentResultDiv);
           });
         }
