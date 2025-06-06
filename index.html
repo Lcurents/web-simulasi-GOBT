@@ -37,13 +37,12 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-      /* Gaya tambahan jika diperlukan, sebagian besar styling akan dilakukan dengan kelas Tailwind */
+      /* Gaya tambahan jika diperlukan */
       body {
         font-family: 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
-      /* Custom scrollbar styling untuk tampilan yang lebih baik di dark mode */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -59,7 +58,25 @@
         background: #6b7280; /* gray-500 */
       }
       .input-group-item > label {
-        min-width: 100px; /* Atur lebar minimum label untuk konsistensi */
+        min-width: 100px;
+      }
+      /* Styling untuk elemen details/summary */
+      details summary {
+        cursor: pointer;
+        list-style-type: none; /* Hapus marker default */
+      }
+      details summary::-webkit-details-marker {
+        display: none; /* Hapus marker di Chrome/Safari */
+      }
+      details summary::before {
+        content: '▶'; /* Ganti marker dengan ikon panah */
+        display: inline-block;
+        margin-right: 0.5rem;
+        font-size: 0.8em;
+        transition: transform 0.2s;
+      }
+      details[open] > summary::before {
+        transform: rotate(90deg); /* Putar panah saat terbuka */
       }
     </style>
   </head>
@@ -115,6 +132,7 @@
     <script>
       /* --- JAVASCRIPT DIMULAI DI SINI --- */
       document.addEventListener('DOMContentLoaded', () => {
+        // ... (Kode JavaScript untuk addAgentInput, addGoalInput, populateExampleData, dll. tetap sama)
         const agentInputsDiv = document.getElementById('agent-inputs');
         const goalInputsDiv = document.getElementById('goal-inputs');
         const addAgentBtn = document.getElementById('add-agent');
@@ -125,15 +143,12 @@
         let agentCount = 0;
         let goalCount = 0;
 
-        // Fungsi untuk membuat input field dengan gaya Tailwind
         function createInputField(labelText, inputType, inputClass, value, placeholder = '', min, max, step) {
           const div = document.createElement('div');
           div.className = 'input-group-item flex flex-col sm:flex-row sm:items-center gap-2';
-
           const label = document.createElement('label');
-          label.className = 'block text-sm font-medium text-gray-300 sm:w-1/4'; // Lebar label
+          label.className = 'block text-sm font-medium text-gray-300 sm:w-1/4';
           label.textContent = labelText;
-
           const input = document.createElement('input');
           input.type = inputType;
           input.className = `${inputClass} block w-full bg-gray-600 border-gray-500 text-gray-200 rounded-md p-2.5 focus:ring-sky-500 focus:border-sky-500 text-sm placeholder-gray-400`;
@@ -142,85 +157,65 @@
           if (min !== undefined) input.min = min;
           if (max !== undefined) input.max = max;
           if (step !== undefined) input.step = step;
-
           div.appendChild(label);
           div.appendChild(input);
           return { wrapper: div, inputElement: input };
         }
 
-        // --- Fungsi untuk Menambahkan Input Agen ---
         function addAgentInput(agentData = {}) {
           const currentAgentCount = agentCount++;
           const agentId = `agent-${currentAgentCount}`;
           const agentDiv = document.createElement('div');
-          // Styling untuk setiap item agen
           agentDiv.className = 'agent-item bg-gray-800 p-4 rounded-md border border-gray-600 space-y-3';
           agentDiv.id = agentId;
-
-          // Judul kecil untuk setiap agen
           const agentTitle = document.createElement('h3');
           agentTitle.className = 'text-md font-semibold text-sky-400';
           agentTitle.textContent = `Detail Agen ${currentAgentCount + 1}`;
           agentDiv.appendChild(agentTitle);
-
-          // Membuat input fields menggunakan fungsi helper
           const nameField = createInputField('Nama Agen:', 'text', 'agent-name', agentData.name || `Agent ${currentAgentCount + 1}`, 'Contoh: Agent A');
           const energyField = createInputField('Energi:', 'number', 'agent-energy', agentData.energy || 100, '', 0, 100);
           const hungerField = createInputField('Rasa Lapar:', 'number', 'agent-hunger', agentData.hunger || 0, '', 0, 100);
           const weField = createInputField('Bobot Energi (WE):', 'number', 'agent-we', agentData.we || 0.1, '', 0, undefined, 0.01);
           const whField = createInputField('Bobot Lapar (WH):', 'number', 'agent-wh', agentData.wh || 0.1, '', 0, undefined, 0.01);
-
           agentDiv.appendChild(nameField.wrapper);
           agentDiv.appendChild(energyField.wrapper);
           agentDiv.appendChild(hungerField.wrapper);
           agentDiv.appendChild(weField.wrapper);
           agentDiv.appendChild(whField.wrapper);
-
-          // Tombol Hapus Agen
           const removeBtn = document.createElement('button');
           removeBtn.className = 'remove-item bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-md text-xs transition duration-150 ease-in-out self-start sm:self-end';
           removeBtn.textContent = 'Hapus Agen';
           removeBtn.addEventListener('click', () => {
             agentDiv.remove();
-            updateAgentGoalWeights(); // Perbarui bobot goal jika agen dihapus
+            updateAgentGoalWeights();
           });
-
           const buttonContainer = document.createElement('div');
           buttonContainer.className = 'flex justify-end pt-2';
           buttonContainer.appendChild(removeBtn);
           agentDiv.appendChild(buttonContainer);
-
           agentInputsDiv.appendChild(agentDiv);
-
           nameField.inputElement.addEventListener('input', updateAgentGoalWeights);
           updateAgentGoalWeights();
         }
 
-        // --- Fungsi untuk Menambahkan Input Goal ---
         function addGoalInput(goalData = {}) {
           const currentGoalCount = goalCount++;
           const goalId = `goal-${currentGoalCount}`;
           const goalDiv = document.createElement('div');
-          // Styling untuk setiap item goal
           goalDiv.className = 'goal-item bg-gray-800 p-4 rounded-md border border-gray-600 space-y-3';
           goalDiv.id = goalId;
-
-          // Judul kecil untuk setiap goal
           const goalTitle = document.createElement('h3');
           goalTitle.className = 'text-md font-semibold text-sky-400';
           goalTitle.textContent = `Detail Goal ${currentGoalCount + 1}`;
           goalDiv.appendChild(goalTitle);
-
           const nameField = createInputField('Nama Goal:', 'text', 'goal-name', goalData.name || `Goal ${currentGoalCount + 1}`, 'Contoh: Planting');
           const benefitField = createInputField('Goal Benefit:', 'number', 'goal-benefit', goalData.benefit || 1, '', 0, undefined, 0.1);
-          const ecostField = createInputField('Cost Energy (ECost):', 'number', 'goal-ecost', goalData.ecost || 0, '', 0);
-          const hcostField = createInputField('Cost Hunger (HCost):', 'number', 'goal-hcost', goalData.hcost || 0, '', 0);
-
+          const ecostField = createInputField('Cost Energy (ECost):', 'number', 'goal-ecost', goalData.ecost || 0, '', undefined);
+          const hcostField = createInputField('Cost Hunger (HCost):', 'number', 'goal-hcost', goalData.hcost || 0, '', undefined);
           goalDiv.appendChild(nameField.wrapper);
           goalDiv.appendChild(benefitField.wrapper);
           goalDiv.appendChild(ecostField.wrapper);
           goalDiv.appendChild(hcostField.wrapper);
-
           const agentWeightsContainer = document.createElement('div');
           agentWeightsContainer.className = 'agent-weights-container space-y-2 pt-2';
           const weightsLabel = document.createElement('label');
@@ -228,52 +223,37 @@
           weightsLabel.textContent = 'Bobot Goal per Agen:';
           agentWeightsContainer.appendChild(weightsLabel);
           goalDiv.appendChild(agentWeightsContainer);
-
-          // Tombol Hapus Goal
           const removeBtn = document.createElement('button');
           removeBtn.className = 'remove-item bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-md text-xs transition duration-150 ease-in-out self-start sm:self-end';
           removeBtn.textContent = 'Hapus Goal';
           removeBtn.addEventListener('click', () => {
             goalDiv.remove();
           });
-
           const buttonContainer = document.createElement('div');
           buttonContainer.className = 'flex justify-end pt-2';
           buttonContainer.appendChild(removeBtn);
           goalDiv.appendChild(buttonContainer);
-
           goalInputsDiv.appendChild(goalDiv);
-          updateAgentGoalWeights(); // Update bobot goal per agen saat goal baru ditambahkan
+          updateAgentGoalWeights();
         }
 
-        // --- Fungsi untuk Mengisi Data Contoh (Sesuai File Anda) ---
         function populateExampleData() {
           addAgentInput({ name: 'Agent A', energy: 80, hunger: 20, we: 0.2, wh: 0.1 });
           addAgentInput({ name: 'Agent B', energy: 60, hunger: 40, we: 0.1, wh: 0.6 });
           addAgentInput({ name: 'Agent C', energy: 50, hunger: 50, we: 0.3, wh: 0.2 });
-
           addGoalInput({ name: 'Planting', benefit: 1, ecost: 5, hcost: 10 });
           addGoalInput({ name: 'Watering', benefit: 1, ecost: 10, hcost: 20 });
           addGoalInput({ name: 'Harvesting', benefit: 2, ecost: 15, hcost: 30 });
-          addGoalInput({ name: 'Eat', benefit: 0, ecost: 0, hcost: -70 }); // hcost negatif karena mengurangi lapar
-          addGoalInput({ name: 'Rest', benefit: 0, ecost: -30, hcost: 0 }); // ecost negatif karena memulihkan energi
-
-          updateAgentGoalWeights(); // Pastikan dipanggil setelah semua agen dan goal dasar ditambahkan
-
+          addGoalInput({ name: 'Eat', benefit: 0, ecost: 0, hcost: -70 });
+          addGoalInput({ name: 'Rest', benefit: 0, ecost: -30, hcost: 0 });
+          updateAgentGoalWeights();
           setTimeout(() => {
-            // Atur bobot spesifik setelah DOM diperbarui sepenuhnya
             const allGoalItems = document.querySelectorAll('.goal-item');
             allGoalItems.forEach((goalItem) => {
               const goalNameInput = goalItem.querySelector('.goal-name');
               if (!goalNameInput) return;
               const goalName = goalNameInput.value;
-
-              const agentWeights = {
-                'Agent A': 0.5, // Default
-                'Agent B': 0.5,
-                'Agent C': 0.5,
-              };
-
+              const agentWeights = { 'Agent A': 0.5, 'Agent B': 0.5, 'Agent C': 0.5 };
               if (goalName === 'Planting') {
                 agentWeights['Agent A'] = 0.4;
                 agentWeights['Agent B'] = 0.7;
@@ -287,10 +267,6 @@
                 agentWeights['Agent B'] = 0.1;
                 agentWeights['Agent C'] = 0.6;
               }
-              // Untuk 'Eat' dan 'Rest', bobot mungkin tidak terlalu relevan jika benefitnya 0,
-              // tapi kita bisa set default atau spesifik jika diperlukan.
-              // Di sini kita biarkan default 0.5 yang sudah di-set oleh updateAgentGoalWeights.
-
               goalItem.querySelectorAll('.goal-agent-weight').forEach((weightInput) => {
                 const agentName = weightInput.dataset.agentName;
                 if (agentWeights[agentName] !== undefined) {
@@ -301,50 +277,37 @@
           }, 100);
         }
 
-        // --- Fungsi untuk Memperbarui Input Bobot Goal per Agen ---
         function updateAgentGoalWeights() {
           const currentAgentNames = Array.from(document.querySelectorAll('.agent-item .agent-name'))
             .map((input) => input.value.trim())
             .filter((name) => name);
           const goalItems = document.querySelectorAll('.goal-item');
-
           goalItems.forEach((goalDiv) => {
             const agentWeightsContainer = goalDiv.querySelector('.agent-weights-container');
             if (!agentWeightsContainer) return;
-
-            // Simpan nilai bobot yang sudah ada
             const existingWeights = {};
             agentWeightsContainer.querySelectorAll('.goal-agent-weight').forEach((input) => {
               existingWeights[input.dataset.agentName] = input.value;
             });
-
-            // Hapus input bobot lama (kecuali label utama)
             Array.from(agentWeightsContainer.children).forEach((child) => {
               if (!child.matches('label:first-child')) {
-                // Jangan hapus label utama "Bobot Goal per Agen:"
                 child.remove();
               }
             });
-
-            // Tambahkan input bobot baru sesuai agen yang ada
             currentAgentNames.forEach((agentName) => {
-              if (!agentName) return; // Skip jika nama agen kosong
+              if (!agentName) return;
               const weightInputDiv = document.createElement('div');
-              // Styling untuk setiap input bobot agen dalam goal
               weightInputDiv.className = 'agent-goal-weight-input flex flex-col sm:flex-row sm:items-center gap-2 pl-0 sm:pl-4';
-
               const weightLabel = document.createElement('label');
-              weightLabel.className = 'block text-xs font-medium text-gray-400 sm:w-1/2'; // Label lebih kecil dan abu-abu
+              weightLabel.className = 'block text-xs font-medium text-gray-400 sm:w-1/2';
               weightLabel.textContent = `Bobot untuk "${agentName}":`;
-
               const weightInput = document.createElement('input');
               weightInput.type = 'number';
               weightInput.className = 'goal-agent-weight block w-full bg-gray-500 border-gray-400 text-gray-100 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500 text-sm';
               weightInput.dataset.agentName = agentName;
-              weightInput.value = existingWeights[agentName] !== undefined ? existingWeights[agentName] : 0.5; // Default 0.5
+              weightInput.value = existingWeights[agentName] !== undefined ? existingWeights[agentName] : 0.5;
               weightInput.step = '0.01';
               weightInput.min = '0';
-
               weightInputDiv.appendChild(weightLabel);
               weightInputDiv.appendChild(weightInput);
               agentWeightsContainer.appendChild(weightInputDiv);
@@ -354,7 +317,7 @@
 
         // --- Fungsi Perhitungan Utilitas ---
         function calculateUtility() {
-          resultsDiv.innerHTML = ''; // Bersihkan hasil sebelumnya
+          resultsDiv.innerHTML = '';
 
           const agents = [];
           document.querySelectorAll('.agent-item').forEach((agentDiv) => {
@@ -369,21 +332,15 @@
 
           const goals = [];
           document.querySelectorAll('.goal-item').forEach((goalDiv) => {
-            const goalName = goalDiv.querySelector('.goal-name').value;
-            const goalBenefit = parseFloat(goalDiv.querySelector('.goal-benefit').value);
-            const ecost = parseFloat(goalDiv.querySelector('.goal-ecost').value);
-            const hcost = parseFloat(goalDiv.querySelector('.goal-hcost').value);
-
             const agentWeights = {};
             goalDiv.querySelectorAll('.goal-agent-weight').forEach((input) => {
               agentWeights[input.dataset.agentName] = parseFloat(input.value);
             });
-
             goals.push({
-              name: goalName,
-              benefit: goalBenefit,
-              ecost: ecost,
-              hcost: hcost,
+              name: goalDiv.querySelector('.goal-name').value,
+              benefit: parseFloat(goalDiv.querySelector('.goal-benefit').value),
+              ecost: parseFloat(goalDiv.querySelector('.goal-ecost').value),
+              hcost: parseFloat(goalDiv.querySelector('.goal-hcost').value),
               agentWeights: agentWeights,
             });
           });
@@ -397,12 +354,11 @@
             return;
           }
 
-          const EMax = 100; // Asumsi nilai maksimum energi 100
-          const HMax = 100; // Asumsi nilai maksimum lapar 100
+          const EMax = 100;
+          const HMax = 100;
 
           agents.forEach((agent) => {
             const agentResultDiv = document.createElement('div');
-            // Styling untuk setiap hasil agen
             agentResultDiv.className = 'agent-result bg-gray-750 border border-gray-600 rounded-lg p-4 shadow';
             let bestGoal = null;
             let maxUtility = -Infinity;
@@ -413,23 +369,36 @@
             agentResultDiv.appendChild(agentHeader);
 
             const goalUtilityList = document.createElement('ul');
-            // Styling untuk daftar utilitas goal
-            goalUtilityList.className = 'goal-utility-list list-none p-0 space-y-1';
+            goalUtilityList.className = 'goal-utility-list list-none p-0 space-y-2';
 
             goals.forEach((goal) => {
               const WGoal = goal.agentWeights[agent.name] !== undefined ? goal.agentWeights[agent.name] : 0.5;
-
-              // Rumus Utilitas: Ugoal = (WGoal * GoalBenefit) - (WE * (ECost / EMax)) - (WH * (HCost / HMax))
-              // ECost dan HCost bisa negatif (misalnya untuk Eat/Rest), yang berarti mereka *menambah* utilitas terkait status.
-              const energyCostFactor = goal.ecost / EMax; // Bisa positif (biaya) atau negatif (pemulihan)
-              const hungerCostFactor = goal.hcost / HMax; // Bisa positif (biaya) atau negatif (pemulihan)
-
+              const energyCostFactor = goal.ecost / EMax;
+              const hungerCostFactor = goal.hcost / HMax;
               const utility = WGoal * goal.benefit - agent.we * energyCostFactor - agent.wh * hungerCostFactor;
 
               const listItem = document.createElement('li');
-              // Styling untuk setiap item dalam daftar utilitas
-              listItem.className = 'bg-gray-600 p-2 rounded-md text-sm text-gray-300 flex justify-between items-center';
-              listItem.innerHTML = `<span>Goal "<span class="font-medium text-sky-300">${goal.name}</span>":</span> <span class="font-semibold text-white">${utility.toFixed(3)}</span>`;
+              listItem.className = 'bg-gray-600 p-2 rounded-md text-sm text-gray-300';
+
+              // Membuat elemen <details> untuk rincian perhitungan
+              const details = document.createElement('details');
+              const summary = document.createElement('summary');
+              summary.className = 'flex justify-between items-center';
+              summary.innerHTML = `<span>Goal "<span class="font-medium text-sky-300">${goal.name}</span>":</span> <span class="font-semibold text-white">${utility.toFixed(3)}</span>`;
+
+              const calculationDiv = document.createElement('div');
+              calculationDiv.className = 'mt-2 pt-2 border-t border-gray-500 text-xs text-gray-400 space-y-1 font-mono';
+              calculationDiv.innerHTML = `
+                        <p><strong class="text-gray-300">Rumus:</strong> U = (W_Goal * Benefit) - (W_E * (ECost / EMax)) - (W_H * (HCost / HMax))</p>
+                        <p><strong class="text-gray-300">Substitusi:</strong></p>
+                        <p class="pl-4">U = (${WGoal} * ${goal.benefit}) - (${agent.we} * (${goal.ecost} / ${EMax})) - (${agent.wh} * (${goal.hcost} / ${HMax}))</p>
+                        <p class="pl-4">U = ${(WGoal * goal.benefit).toFixed(3)} - ${(agent.we * energyCostFactor).toFixed(3)} - ${(agent.wh * hungerCostFactor).toFixed(3)}</p>
+                        <p class="pl-4 font-bold text-gray-200">U = ${utility.toFixed(3)}</p>
+                    `;
+
+              details.appendChild(summary);
+              details.appendChild(calculationDiv);
+              listItem.appendChild(details);
               goalUtilityList.appendChild(listItem);
 
               if (utility > maxUtility) {
@@ -454,15 +423,12 @@
           });
         }
 
-        // --- Event Listeners ---
         addAgentBtn.addEventListener('click', () => addAgentInput());
         addGoalBtn.addEventListener('click', () => addGoalInput());
         calculateBtn.addEventListener('click', calculateUtility);
 
-        // Muat data contoh saat halaman pertama kali dimuat
         populateExampleData();
       });
-      /* --- JAVASCRIPT SELESAI DI SINI --- */
     </script>
   </body>
 </html>
